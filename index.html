@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BusPing - Notification Bus Scolaire</title>
+  <meta name="description" content="Prévenez le groupe WhatsApp des parents en 1 clic de l'arrivée et du départ du bus scolaire.">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BusPing">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚌</text></svg>">
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --success-dark: #15803d;
+      --accent: #d97706;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --whatsapp: #25D366;
+      --whatsapp-dark: #1ebd5a;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 12px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 25px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: calc(100vh - 24px);
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e40af, #2563eb);
+      color: white;
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      opacity: 0.9;
+      font-weight: 500;
+    }
+
+    .header-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .header-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    main {
+      padding: 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .badge-card {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge-info {
+      font-size: 13px;
+      color: #1e3a8a;
+      line-height: 1.4;
+    }
+
+    .badge-info strong {
+      display: block;
+      font-size: 15px;
+      color: #172554;
+    }
+
+    /* GROS BOUTONS D'ACTION TACTILES */
+    .action-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 6px;
+    }
+
+    .big-btn {
+      border: none;
+      border-radius: 18px;
+      padding: 18px 20px;
+      color: white;
+      font-weight: 700;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+      transition: transform 0.1s, box-shadow 0.1s, filter 0.15s;
+      text-align: left;
+    }
+
+    .big-btn:active {
+      transform: scale(0.98);
+      filter: brightness(0.95);
+    }
+
+    .big-btn-icon {
+      font-size: 36px;
+      line-height: 1;
+    }
+
+    .big-btn-content {
+      flex: 1;
+    }
+
+    .big-btn-title {
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .big-btn-desc {
+      font-size: 12px;
+      opacity: 0.9;
+      font-weight: 400;
+      margin-top: 3px;
+    }
+
+    .btn-arrival {
+      background: linear-gradient(135deg, #15803d, #16a34a);
+    }
+
+    .btn-departure {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+    }
+
+    .btn-delay {
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+    }
+
+    /* ZONE DE MESSAGE APERÇU */
+    .preview-card {
+      background: #f0fdf4;
+      border: 1px dashed #86efac;
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 8px;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #166534;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .whatsapp-bubble {
+      background: #ffffff;
+      border-radius: 12px;
+      border-top-left-radius: 2px;
+      padding: 12px 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      font-size: 14px;
+      line-height: 1.5;
+      color: #1e293b;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .share-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn-whatsapp {
+      background: var(--whatsapp);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 15px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+      transition: filter 0.15s, transform 0.1s;
+    }
+
+    .btn-whatsapp:hover {
+      background: var(--whatsapp-dark);
+    }
+
+    .btn-whatsapp:active {
+      transform: scale(0.98);
+    }
+
+    .aux-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-aux {
+      flex: 1;
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-aux:hover {
+      background: #e2e8f0;
+    }
+
+    /* HISTORIQUE RÉCENT */
+    .history-card {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .history-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .history-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .history-item {
+      font-size: 12px;
+      color: #475569;
+      background: #f8fafc;
+      padding: 6px 10px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* FORMULAIRE DE CONFIGURATION */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    label span {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-save {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-save:hover {
+      background: var(--primary-dark);
+    }
+
+    /* TOAST DE CONFIRMATION */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #0f172a;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* MODALE AIDE INSTALLATION ANDROID */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 99;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: 20px;
+      padding: 22px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      background: #eff6ff;
+      color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .close-modal-btn {
+      width: 100%;
+      padding: 12px;
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+<script src="/_aistudio-iframe.js?v=6634132a"></script></head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <div class="brand">
+        <span class="brand-icon">🚌</span>
+        <div class="brand-text">
+          <h1>BusPing</h1>
+          <p>Le ping express des parents</p>
+        </div>
+      </div>
+      <button id="toggleConfigBtn" class="header-btn" title="Paramètres">
+        ⚙️ <span id="headerBtnLabel">Réglages</span>
+      </button>
+    </header>
+
+    <main>
+      <!-- ÉCRAN 1 : CONFIGURATION (Affiché si non configuré ou clic sur ⚙️) -->
+      <section id="configScreen" style="display: none;">
+        <div style="background: #eff6ff; border-radius: 12px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: #1e40af;">
+          💡 <strong>Configurez une seule fois :</strong> vos informations restent sauvegardées sur votre téléphone. Les jours suivants, il vous suffira d'un clic !
+        </div>
+
+        <form id="configForm">
+          <div class="form-group">
+            <label for="stopName">📍 Nom du point de ramassage / arrêt</label>
+            <input type="text" id="stopName" placeholder="Ex: Arrêt Mairie / Église" required>
+          </div>
+
+          <div class="form-group">
+            <label for="busNumber">🚌 Numéro ou nom du bus</label>
+            <input type="text" id="busNumber" placeholder="Ex: Bus n°12 ou Ligne Jaune" required>
+          </div>
+
+          <div class="form-group">
+            <label for="parentSign">👤 Votre nom ou signature <span>(optionnel)</span></label>
+            <input type="text" id="parentSign" placeholder="Ex: Maman de Lucas">
+          </div>
+
+          <div class="form-group">
+            <label for="scenarioArrival">✅ Message personnalisé : ARRIVÉE</label>
+            <input type="text" id="scenarioArrival" value="Le bus vient d'arriver au point de ramassage." required>
+          </div>
+
+          <div class="form-group">
+            <label for="scenarioDeparture">🚀 Message personnalisé : DÉPART</label>
+            <input type="text" id="scenarioDeparture" value="Le bus vient de repartir, tous les élèves sont à bord !" required>
+          </div>
+
+          <button type="submit" class="btn-save">
+            💾 Enregistrer et Commencer
+          </button>
+        </form>
+      </section>
+
+      <!-- ÉCRAN 2 : BOUTONS RAPIDES (Utilisation quotidienne en 1 clic) -->
+      <section id="fastScreen" style="display: none;">
+        <div class="badge-card">
+          <div class="badge-info">
+            <span id="badgeBus">Bus n°12</span>
+            <strong id="badgeStop">Arrêt Mairie</strong>
+          </div>
+          <button id="editFromBadgeBtn" style="background: white; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
+            ✏️ Modifier
+          </button>
+        </div>
+
+        <div class="action-grid">
+          <button id="btnArrive" class="big-btn btn-arrival">
+            <span class="big-btn-icon">🟢</span>
+            <div class="big-btn-content">
+              <div class="big-btn-title">ARRIVÉE au point</div>
+              <div class="big-btn-desc">Prévenir que le bus est là</div>
+            </div>
+            <span style="font-size: 20px;">👉</span>
+          </button>
+
+          <button id="btnDepart" class="big-btn btn-departure">
+            <span class="big-btn-icon">🚀</span>
+            <div class="big-btn-content">
+              <div class="big-btn-title">DÉPART du point</div>
+              <div class="big-btn-desc">Prévenir que le bus est reparti</div>
+            </div>
+            <span style="font-size: 20px;">👉</span>
+          </button>
+
+          <button id="btnDelay" class="big-btn btn-delay" style="padding: 12px 18px;">
+            <span class="big-btn-icon" style="font-size: 26px;">⏳</span>
+            <div class="big-btn-content">
+              <div class="big-btn-title" style="font-size: 15px;">Signaler un retard (+5 min)</div>
+              <div class="big-btn-desc">Pour rassurer les parents en attente</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- ZONE DU MESSAGE GÉNÉRÉ -->
+        <div id="previewArea" class="preview-card" style="display: none;">
+          <div class="preview-header">
+            <span>Message prêt pour WhatsApp</span>
+            <span id="previewTimestamp" style="color: #0f172a; font-weight: 800;"></span>
+          </div>
+
+          <div class="whatsapp-bubble" id="whatsappMessageText"></div>
+
+          <div class="share-row">
+            <button id="shareWhatsAppBtn" class="btn-whatsapp">
+              <span style="font-size: 20px;">💬</span>
+              Ouvrir & Coller dans WhatsApp
+            </button>
+
+            <div class="aux-buttons">
+              <button id="copyMessageBtn" class="btn-aux">
+                📋 Copier
+              </button>
+              <button id="shareNativeBtn" class="btn-aux">
+                📤 Autre (SMS / Mail)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORIQUE DU JOUR -->
+        <div class="history-card" id="historyContainer" style="display: none;">
+          <div class="history-title">🕒 Historique des pings envoyés</div>
+          <ul class="history-list" id="historyList"></ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 10px;">
+          <button id="howToInstallBtn" style="background: none; border: none; color: #64748b; font-size: 12px; text-decoration: underline; cursor: pointer;">
+            📲 Comment installer cette app sur mon écran d'accueil ?
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast">
+    <span id="toastIcon">✅</span>
+    <span id="toastMsg">Message copié dans le presse-papier !</span>
+  </div>
+
+  <!-- MODALE GUIDE INSTALLATION ANDROID -->
+  <div id="installModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>📲</span> Installer BusPing sur Android
+      </div>
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+        Transformez cette page en vraie application sur votre téléphone en 3 secondes :
+      </p>
+
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div>Ouvrez cette page dans <strong>Google Chrome</strong> sur votre téléphone Android.</div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div>Appuyez sur les <strong>3 petits points verticaux (⋮)</strong> tout en haut à droite.</div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div>Sélectionnez <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div>Terminé ! L'icône 🚌 apparaîtra sur votre écran comme une vraie application.</div>
+      </div>
+
+      <button id="closeModalBtn" class="close-modal-btn">J'ai compris !</button>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. GESTION DES DONNÉES LOCALES (localStorage) ---
+    const STORAGE_KEY = 'busping_settings_v1';
+    const HISTORY_KEY = 'busping_history_v1';
+
+    // Valeurs par défaut si le parent commence
+    const defaultSettings = {
+      stopName: 'Arrêt Mairie / Église',
+      busNumber: 'Bus n°12',
+      parentSign: '',
+      scenarioArrival: "Le bus vient d'arriver au point de ramassage.",
+      scenarioDeparture: "Le bus vient de repartir, tous les élèves sont à bord !"
+    };
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function saveSettings(settings) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function addHistoryItem(text) {
+      const history = loadHistory();
+      const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      history.unshift({ time: timeStr, text: text });
+      // On conserve les 5 derniers pings
+      const trimmed = history.slice(0, 5);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+      renderHistory();
+    }
+
+    // --- 2. FORMAT DU MESSAGE DÉDIÉ WHATSAPP ---
+    function formatMessage(type, settings) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+      let emojiType = '🚌';
+      let statusText = '';
+
+      if (type === 'arrival') {
+        emojiType = '🟢 *ARRIVÉE DU BUS*';
+        statusText = settings.scenarioArrival || "Le bus vient d'arriver au point de ramassage.";
+      } else if (type === 'departure') {
+        emojiType = '🚀 *DÉPART DU BUS*';
+        statusText = settings.scenarioDeparture || "Le bus vient de repartir, tous les élèves sont à bord !";
+      } else if (type === 'delay') {
+        emojiType = '⏳ *INFO RETARD (+5 MIN)*';
+        statusText = "Le bus a un léger retard estimé à 5 minutes.";
+      }
+
+      // Construction claire et aérée avec les emojis repères
+      let msg = `${emojiType}\n`;
+      msg += `🚌 *${settings.busNumber.trim()}*\n`;
+      msg += `📍 *Point :* ${settings.stopName.trim()}\n`;
+      msg += `⏰ *Heure :* ${timeStr}\n\n`;
+      msg += `👉 ${statusText}`;
+
+      if (settings.parentSign && settings.parentSign.trim()) {
+        msg += `\n\n👤 _Transmis par ${settings.parentSign.trim()}_`;
+      }
+
+      return { text: msg, time: timeStr };
+    }
+
+    // --- 3. ÉLÉMENTS DU DOM ---
+    const configScreen = document.getElementById('configScreen');
+    const fastScreen = document.getElementById('fastScreen');
+    const toggleConfigBtn = document.getElementById('toggleConfigBtn');
+    const headerBtnLabel = document.getElementById('headerBtnLabel');
+    const configForm = document.getElementById('configForm');
+    const editFromBadgeBtn = document.getElementById('editFromBadgeBtn');
+
+    const stopNameInput = document.getElementById('stopName');
+    const busNumberInput = document.getElementById('busNumber');
+    const parentSignInput = document.getElementById('parentSign');
+    const scenarioArrivalInput = document.getElementById('scenarioArrival');
+    const scenarioDepartureInput = document.getElementById('scenarioDeparture');
+
+    const badgeBus = document.getElementById('badgeBus');
+    const badgeStop = document.getElementById('badgeStop');
+
+    const btnArrive = document.getElementById('btnArrive');
+    const btnDepart = document.getElementById('btnDepart');
+    const btnDelay = document.getElementById('btnDelay');
+
+    const previewArea = document.getElementById('previewArea');
+    const previewTimestamp = document.getElementById('previewTimestamp');
+    const whatsappMessageText = document.getElementById('whatsappMessageText');
+    const shareWhatsAppBtn = document.getElementById('shareWhatsAppBtn');
+    const copyMessageBtn = document.getElementById('copyMessageBtn');
+    const shareNativeBtn = document.getElementById('shareNativeBtn');
+
+    const historyContainer = document.getElementById('historyContainer');
+    const historyList = document.getElementById('historyList');
+
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toastIcon');
+    const toastMsg = document.getElementById('toastMsg');
+
+    const howToInstallBtn = document.getElementById('howToInstallBtn');
+    const installModal = document.getElementById('installModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    let currentGeneratedMessage = '';
+
+    // --- 4. NAVIGATION ENTRE ÉCRANS ---
+    function showScreen(isConfig) {
+      if (isConfig) {
+        configScreen.style.display = 'block';
+        fastScreen.style.display = 'none';
+        headerBtnLabel.textContent = 'Annuler';
+      } else {
+        configScreen.style.display = 'none';
+        fastScreen.style.display = 'block';
+        headerBtnLabel.textContent = 'Réglages';
+      }
+    }
+
+    function showToast(message, icon = '✅') {
+      toastIcon.textContent = icon;
+      toastMsg.textContent = message;
+      toast.classList.add('show');
+      if (navigator.vibrate) navigator.vibrate(50);
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // --- 5. INITIALISATION ---
+    let userSettings = loadSettings();
+
+    if (!userSettings) {
+      // Première ouverture : on préremplit les champs avec des valeurs amicales
+      stopNameInput.value = '';
+      busNumberInput.value = '';
+      parentSignInput.value = '';
+      scenarioArrivalInput.value = defaultSettings.scenarioArrival;
+      scenarioDepartureInput.value = defaultSettings.scenarioDeparture;
+      showScreen(true);
+    } else {
+      populateBadge(userSettings);
+      showScreen(false);
+      renderHistory();
+    }
+
+    function populateBadge(settings) {
+      badgeBus.textContent = settings.busNumber || 'Bus scolaire';
+      badgeStop.textContent = settings.stopName || 'Point de ramassage';
+    }
+
+    // Sauvegarde du formulaire
+    configForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const updated = {
+        stopName: stopNameInput.value.trim() || 'Arrêt Mairie',
+        busNumber: busNumberInput.value.trim() || 'Bus Scolaire',
+        parentSign: parentSignInput.value.trim(),
+        scenarioArrival: scenarioArrivalInput.value.trim() || defaultSettings.scenarioArrival,
+        scenarioDeparture: scenarioDepartureInput.value.trim() || defaultSettings.scenarioDeparture
+      };
+      saveSettings(updated);
+      userSettings = updated;
+      populateBadge(updated);
+      showScreen(false);
+      showToast('Profil enregistré avec succès !', '💾');
+    });
+
+    toggleConfigBtn.addEventListener('click', () => {
+      const isConfigCurrentlyVisible = configScreen.style.display === 'block';
+      if (isConfigCurrentlyVisible && userSettings) {
+        showScreen(false);
+      } else {
+        if (userSettings) {
+          stopNameInput.value = userSettings.stopName;
+          busNumberInput.value = userSettings.busNumber;
+          parentSignInput.value = userSettings.parentSign || '';
+          scenarioArrivalInput.value = userSettings.scenarioArrival;
+          scenarioDepartureInput.value = userSettings.scenarioDeparture;
+        }
+        showScreen(true);
+      }
+    });
+
+    editFromBadgeBtn.addEventListener('click', () => {
+      toggleConfigBtn.click();
+    });
+
+    // --- 6. DÉCLENCHEMENT DES BOUTONS 1-CLIC ---
+    function triggerPing(type) {
+      if (!userSettings) {
+        showScreen(true);
+        return;
+      }
+
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+
+      const { text, time } = formatMessage(type, userSettings);
+      currentGeneratedMessage = text;
+
+      // Affichage du message dans la bulle
+      previewTimestamp.textContent = `à ${time}`;
+      whatsappMessageText.textContent = text;
+      previewArea.style.display = 'block';
+
+      // Enregistrement dans l'historique
+      const label = type === 'arrival' ? 'Arrivée au point' : (type === 'departure' ? 'Départ du point' : 'Retard 5min');
+      addHistoryItem(`${label} (${time})`);
+
+      // Défilement doux vers la zone d'action
+      previewArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      showToast('Message généré ! Cliquez ci-dessous pour envoyer.', '⚡');
+    }
+
+    btnArrive.addEventListener('click', () => triggerPing('arrival'));
+    btnDepart.addEventListener('click', () => triggerPing('departure'));
+    btnDelay.addEventListener('click', () => triggerPing('delay'));
+
+    // --- 7. PARTAGE ET ENVOI SUR WHATSAPP ---
+    function openWhatsApp(text) {
+      const encoded = encodeURIComponent(text);
+      // Tentative via le schéma officiel de l'application WhatsApp
+      const appUrl = `whatsapp://send?text=${encoded}`;
+      const webUrl = `https://api.whatsapp.com/send?text=${encoded}`;
+
+      // Redirection directe
+      window.location.href = appUrl;
+
+      // Fallback vers web WhatsApp si l'application native ne s'ouvre pas
+      setTimeout(() => {
+        window.location.href = webUrl;
+      }, 700);
+    }
+
+    shareWhatsAppBtn.addEventListener('click', () => {
+      if (!currentGeneratedMessage) return;
+      openWhatsApp(currentGeneratedMessage);
+    });
+
+    copyMessageBtn.addEventListener('click', async () => {
+      if (!currentGeneratedMessage) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(currentGeneratedMessage);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = currentGeneratedMessage;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        showToast('Message copié ! Collez-le dans WhatsApp.', '📋');
+      } catch (err) {
+        showToast('Erreur de copie, sélectionnez le texte.', '⚠️');
+      }
+    });
+
+    shareNativeBtn.addEventListener('click', async () => {
+      if (!currentGeneratedMessage) return;
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'BusPing Notification',
+            text: currentGeneratedMessage
+          });
+        } catch (e) {
+          // Annulé par l'utilisateur
+        }
+      } else {
+        // Fallback SMS
+        const encoded = encodeURIComponent(currentGeneratedMessage);
+        window.location.href = `sms:?body=${encoded}`;
+      }
+    });
+
+    // --- 8. HISTORIQUE VISUEL ---
+    function renderHistory() {
+      const list = loadHistory();
+      if (!list || list.length === 0) {
+        historyContainer.style.display = 'none';
+        return;
+      }
+      historyContainer.style.display = 'block';
+      historyList.innerHTML = '';
+      list.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'history-item';
+        li.innerHTML = `<span>${item.text}</span><span style="color:#94a3b8; font-size:11px;">enregistré</span>`;
+        historyList.appendChild(li);
+      });
+    }
+
+    // --- 9. MODALE AIDE INSTALLATION ANDROID ---
+    howToInstallBtn.addEventListener('click', () => {
+      installModal.classList.add('open');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      installModal.classList.remove('open');
+    });
+
+    installModal.addEventListener('click', (e) => {
+      if (e.target === installModal) {
+        installModal.classList.remove('open');
+      }
+    });
+
+    // --- 10. SUPPORT SERVICE WORKER INLINE (PWA OFFLINE COMPLÈTE) ---
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      const swCode = `
+        const CACHE_NAME = 'busping-v1';
+        self.addEventListener('install', (e) => {
+          self.skipWaiting();
+        });
+        self.addEventListener('activate', (e) => {
+          e.waitUntil(clients.claim());
+        });
+        self.addEventListener('fetch', (e) => {
+          e.respondWith(
+            fetch(e.request).catch(() => caches.match(e.request))
+          );
+        });
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swUrl).catch(() => {});
+    }
+  </script>
+</body>
+</html>
